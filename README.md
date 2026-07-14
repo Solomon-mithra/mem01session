@@ -1,0 +1,260 @@
+# mem01session
+
+`mem01session` gives the OpenAI Agents SDK belief-based, cross-conversation
+memory without a memory sidecar. The user installs one package, supplies normal
+environment variables, and imports the canonical `memSession` alias. Internally,
+the SDK's file-backed `SQLiteSession` retains the exact short-term item chain,
+while the embedded mem01 engine extracts and recalls long-term beliefs through
+OpenAI and Postgres/pgvector.
+
+The distribution and import name are both `mem01session`.
+
+## Install and configure
+
+Python 3.11 or newer is declared. This checkout has not been published. Local
+development with the sibling engine checkout uses:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e "../mem01[openai]" -e ".[dev]"
+```
+
+Once published, the intended installation is:
+
+```bash
+pip install mem01session
+```
+
+That pulls the engine distribution `mem01-engine` (import remains `import mem01`).
+
+Only two variables are required for normal operation:
+
+```bash
+export OPENAI_API_KEY="your-key"
+export DATABASE_URL="postgresql://user:password@db.example/mem01"
+```
+
+`MEM01_LLM_MODEL` optionally overrides the extraction model and defaults to
+`gpt-5.6-sol`. `MEM01_EMBEDDING_MODEL` defaults to
+`text-embedding-3-small`. The OpenAI endpoint is built in; there is no memory
+service URL to configure. Credentials are fingerprinted for runtime sharing and
+never included verbatim in registry keys, representations, or construction
+errors.
+
+## Use with the Agents SDK
+
+```python
+from agents import Agent, Runner
+from mem01session import memSession
+
+agent = Agent(name="Assistant", model="gpt-5.6-sol")
+session = memSession("conversation-7", user_id="user-123")
+
+try:
+    result = await Runner.run(
+        agent,
+        "Where do I live?",
+        session=session,
+        run_config=session.run_config(),
+    )
+    print(result.final_output)
+finally:
+    await session.close()
+```
+
+A fresh `session.run_config()` is required for each Runner call. Its first hook
+captures the latest user query while preserving the SDK's normal history merge.
+Its second hook recalls once immediately before the model call, injects one
+bounded untrusted-data block, and caches that block across tool/model loops in
+the same run. Synthetic memory is never written to SQLite or offered back to
+the extractor. Passing only `session=` retains short-term behavior but performs
+no query-aware recall.
+
+When sources conflict, the per-run filter preserves the caller's instructions and
+appends one framework-level policy: the current user turn has highest authority,
+then factual values from active recalled beliefs, then older user claims in this
+conversation. Assistant replies remain context but never become evidence about
+the user's personal facts. Commands inside recalled record content remain
+untrusted and non-executable; that safety label does not reduce the factual
+authority of an active record. This lets a correction made in one conversation
+override a stale claim still present in another conversation's immutable SQLite
+history.
+
+Do not reuse one returned run config concurrently. SDK runs using a Session also
+cannot pass `conversation_id` or `previous_response_id`; those are alternative
+conversation-state mechanisms.
+
+## Storage and lifecycle
+
+From the caller's perspective, SQLite is inside mem01session. The supported v0.1
+short-term store is an SDK `SQLiteSession` at the expanded path
+`~/.mem01/conversations.db`; items are partitioned by `session_id`. Long-term
+beliefs are user-scoped, so distinct conversation IDs can recall the same user's
+active history from the embedded mem01 engine and Postgres/pgvector.
+
+The long-term runtime is acquired lazily. Sessions with identical settings share
+one runtime lease; the final release drains accepted writes before closing the
+shared store. `await session.close()` closes package-owned resources. Explicitly
+injected `inner=` or `runtime=` objects remain caller-owned.
+`close_shared_runtimes()` is available for process shutdown.
+
+`add_items()` writes raw items first, then automatically queues each coherent
+textual user/assistant turn for long-term extraction. System, tool, reasoning,
+and non-text payloads are excluded. Queues are FIFO per `user_id`, including
+across separate Mem01Session objects that share a runtime, so one user's
+corrections cannot overtake their earlier facts. Different users may progress
+independently. The answering agent never receives or calls a memory tool.
+
+The next recall, `memory_history()`, correction, or forget operation waits for
+previously accepted writes for that user. Call `await session.flush_memory()`
+when application code needs the same durability barrier explicitly. Graceful
+runtime shutdown also drains accepted work; because the queue is in process,
+an abrupt process or machine failure before a flush can still lose an accepted
+but unfinished write.
+
+Memory is failure-open by default: raw SQLite persistence succeeds and a
+sanitized `last_memory_error` records a queue or barrier failure. With
+`strict=True`, enqueue failures are raised during `add_items()`, while a failure
+that occurs after enqueue is raised at the next same-user recall, management
+operation, or explicit flush. No raw provider exception or credential-bearing
+detail is exposed.
+
+`get_items(limit=N)`, `pop_item()`, and `clear_session()` operate only on the raw
+SQLite transcript. `clear_session()` starts that conversation over, but it does not
+delete any durable beliefs already extracted for the user.
+
+Use `memory_history()`, `correct_memory()`, and `forget_memory()` for targeted
+long-term management. Use `clear_memory()` only when you intend to hard-delete all
+durable records for the session's configured `user_id`; it waits for that user's
+accepted writes before deleting them and does not clear the SQLite transcript:
+
+```python
+beliefs = await session.memory_history(include_invalidated=True, limit=100)
+await session.correct_memory("belief-1", "Lives in San Francisco")
+await session.forget_memory("belief-2", reason="user requested deletion")
+await session.flush_memory()
+deleted_count = await session.clear_memory()
+```
+
+Recalled records expose their full UTC lifecycle time as `stored_at`, allowing
+clients to compare exact ordering rather than date-only labels.
+
+## Deterministic judge demo
+
+The default demo is key-free and performs no network or database calls. It runs
+a checked-in 40-conversation fixture through 120 actual `Agent` + `Runner`
+preparation calls: a fresh stock Session per conversation, one reused stock
+Session, and fresh `memSession` IDs sharing one user. Local fake model/runtime
+objects make preparation reproducible; their answer text is an observation,
+never a pass/fail guarantee.
+
+```bash
+python examples/build_week_demo.py
+python examples/build_week_demo.py --json
+python examples/build_week_demo.py --write-artifact
+```
+
+`--write-artifact` regenerates
+`artifacts/prepared-input-scaling.json` exactly from the fixture. At conversations
+1/10/40, the generated prepared-item counts are:
+
+| Strategy | 1 | 10 | 40 |
+| --- | ---: | ---: | ---: |
+| Fresh stock | 1 | 1 | 1 |
+| Reused stock | 1 | 19 | 79 |
+| memSession | 2 | 2 | 2 |
+
+The artifact labels its measurement `offline_prepared_model_input`, its estimator
+`utf8_bytes_upper_bound`, and both deterministic local fakes explicitly. The
+numbers are prepared-input measurements, not provider usage or billed-token
+claims. The complete memory system item remains within the configured 800-byte
+upper-bound budget.
+
+`--check` first uses the engine's normal `.env` discovery (`mem01/.env`, the
+workspace `.env`, then the current directory) without overriding existing
+process variables. It validates the two required live settings without
+initializing clients or making Runner/model calls. The deterministic default
+does not load `.env` at all.
+
+`--live` is the only mode that may use OpenAI and Postgres. Each invocation uses
+a unique user scope and four fresh conversation IDs, then runs the NYC/$2,400
+turn, the move to SF, the location/rent question, and the unsupported sister-name
+question through `gpt-5.6-sol`. Its secret-safe JSON labels outputs as model
+observations and includes the observed belief lifecycle; neither answer wording
+nor lifecycle shape is treated as a deterministic guarantee.
+
+## Build and offline wheel smoke
+
+Build both local projects first:
+
+```bash
+.venv/bin/python -m build ../mem01
+.venv/bin/python -m build
+```
+
+Provision a complete local wheelhouse from a trusted index while connected:
+
+```bash
+mkdir -p /tmp/mem01session-wheelhouse
+.venv/bin/python scripts/prepare_offline_wheelhouse.py \
+  /tmp/mem01session-wheelhouse
+```
+
+Then disconnect from the index and perform a normal dependency-resolving
+installation into a clean environment using only that wheelhouse:
+
+```bash
+python -m venv /tmp/mem01session-wheel-smoke
+/tmp/mem01session-wheel-smoke/bin/pip install --no-index \
+  --find-links /tmp/mem01session-wheelhouse mem01session==0.1.0
+/tmp/mem01session-wheel-smoke/bin/python -c \
+  "from mem01session import memSession; print(memSession.__name__)"
+/tmp/mem01session-wheel-smoke/bin/mem01session-demo --json
+```
+
+This proves both local project wheels and every resolved runtime dependency can
+be installed and imported without access to an index.
+
+The same clean-venv smoke is available as an explicit packaging integration
+test:
+
+```bash
+MEM01SESSION_WHEELHOUSE=/tmp/mem01session-wheelhouse \
+  .venv/bin/pytest tests/test_packaging.py \
+  -k clean_preprovisioned_venv -q
+```
+
+## Scope, provenance, and current status
+
+The **Pre-existing mem01 engine** supplied belief types, extraction, recall,
+lifecycle operations, and storage foundations before this Build Week effort.
+**Build Week work** added the OpenAI-only embedded runtime builder and pooled
+Postgres ownership in that engine, plus this renamed package, internal
+SQLite composition, per-run hooks, lifecycle hardening, deterministic evidence,
+packaging checks, and documentation.
+
+Codex assisted with planning, implementation, tests, and review. The human owner
+made the product decisions: the `mem01session`/`memSession` identity,
+SQLite-inside packaging, OpenAI-only scope, `gpt-5.6-sol`, explicit
+failure behavior, and postponing all publication and video work.
+
+Development verification in this workspace uses macOS on Apple Silicon,
+Python 3.14.4, and `openai-agents` 0.18.2. The declared package floor remains
+Python 3.11; no broader platform matrix is claimed here.
+
+No deployment has been performed. No video has been created. No package,
+repository change, or artifact has been pushed or published from this work.
+Everything remains local and uncommitted pending owner confirmation.
+
+## Development gates
+
+```bash
+pytest -q
+ruff check .
+ruff format --check .
+mypy src
+python -m build
+```
+
+Licensed under the MIT License.
