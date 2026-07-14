@@ -45,7 +45,7 @@ def test_wheel_metadata_declares_canonical_identity_and_mem01_dependency() -> No
         metadata = BytesParser(policy=default).parsebytes(archive.read(metadata_name))
 
     assert metadata["Name"] == "mem01session"
-    assert metadata["Version"] == "0.1.1"
+    assert metadata["Version"] == "0.1.2"
     requirements = metadata.get_all("Requires-Dist")
     assert requirements is not None
     assert "mem01-engine[openai]>=0.1.0" in requirements
@@ -85,7 +85,7 @@ def test_clean_preprovisioned_venv_installs_local_wheels_offline(
             "--no-index",
             "--find-links",
             wheelhouse,
-            "mem01session==0.1.1",
+            "mem01session==0.1.2",
         ],
         check=True,
         capture_output=True,
@@ -122,6 +122,6 @@ def test_wheelhouse_preparation_script_documents_direct_local_wheels() -> None:
     source = (ROOT / "scripts" / "prepare_offline_wheelhouse.py").read_text()
 
     assert "mem01_engine-0.1.0-py3-none-any.whl" in source
-    assert "mem01session-0.1.1-py3-none-any.whl" in source
+    assert "mem01session-0.1.2-py3-none-any.whl" in source
     assert '"download"' in source
     assert '"--only-binary=:all:"' in source

@@ -13,7 +13,7 @@ ROOT = Path(__file__).parents[1]
 ENGINE_WHEEL = (
     ROOT.parent / "mem01" / "dist" / "mem01_engine-0.1.0-py3-none-any.whl"
 )
-SESSION_WHEEL = ROOT / "dist" / "mem01session-0.1.1-py3-none-any.whl"
+SESSION_WHEEL = ROOT / "dist" / "mem01session-0.1.2-py3-none-any.whl"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

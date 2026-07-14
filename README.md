@@ -11,22 +11,21 @@ The distribution and import name are both `mem01session`.
 
 ## Install and configure
 
-Python 3.11 or newer is declared. This checkout has not been published. Local
-development with the sibling engine checkout uses:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e "../mem01[openai]" -e ".[dev]"
-```
-
-Once published, the intended installation is:
+Python 3.11 or newer is declared. Install from PyPI:
 
 ```bash
 pip install mem01session
 ```
 
 That pulls the engine distribution `mem01-engine` (import remains `import mem01`).
+
+For local development with the sibling engine checkout:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e "../mem01[openai]" -e ".[dev]"
+```
 
 Only two variables are required for normal operation:
 
@@ -207,7 +206,7 @@ installation into a clean environment using only that wheelhouse:
 ```bash
 python -m venv /tmp/mem01session-wheel-smoke
 /tmp/mem01session-wheel-smoke/bin/pip install --no-index \
-  --find-links /tmp/mem01session-wheelhouse mem01session==0.1.0
+  --find-links /tmp/mem01session-wheelhouse mem01session==0.1.2
 /tmp/mem01session-wheel-smoke/bin/python -c \
   "from mem01session import memSession; print(memSession.__name__)"
 /tmp/mem01session-wheel-smoke/bin/mem01session-demo --json
@@ -236,16 +235,16 @@ packaging checks, and documentation.
 
 Codex assisted with planning, implementation, tests, and review. The human owner
 made the product decisions: the `mem01session`/`memSession` identity,
-SQLite-inside packaging, OpenAI-only scope, `gpt-5.6-sol`, explicit
-failure behavior, and postponing all publication and video work.
+SQLite-inside packaging, OpenAI-only scope, `gpt-5.6-sol`, and explicit
+failure behavior.
 
 Development verification in this workspace uses macOS on Apple Silicon,
 Python 3.14.4, and `openai-agents` 0.18.2. The declared package floor remains
 Python 3.11; no broader platform matrix is claimed here.
 
-No deployment has been performed. No video has been created. No package,
-repository change, or artifact has been pushed or published from this work.
-Everything remains local and uncommitted pending owner confirmation.
+Published surfaces: PyPI (`mem01session`, depends on `mem01-engine`) and the
+public GitHub repository. A hosted multi-user demo and submission video remain
+separate delivery items when provided.
 
 ## Development gates
 
