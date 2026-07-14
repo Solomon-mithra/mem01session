@@ -156,10 +156,12 @@ def test_example_is_a_thin_cli_over_the_packaged_demo() -> None:
     assert len(source.splitlines()) <= 12
 
 
-def test_readme_documents_judge_path_boundaries_and_truthful_status() -> None:
+def test_readme_documents_install_demo_and_scope() -> None:
     readme = (Path(__file__).parents[1] / "README.md").read_text()
 
     for required in (
+        "pip install mem01session",
+        "mem01-engine",
         "python examples/build_week_demo.py --json",
         "python examples/build_week_demo.py --write-artifact",
         "SQLiteSession",
@@ -167,19 +169,16 @@ def test_readme_documents_judge_path_boundaries_and_truthful_status() -> None:
         "session.run_config()",
         "failure-open",
         "strict=True",
-        "Pre-existing mem01 engine",
-        "Build Week work",
-        "Codex",
-        "human",
-        "not been published",
-        "No deployment",
-        "No video",
+        "mem01 engine",
+        "This package",
         "Python 3.14.4",
         "--no-index",
         "--find-links",
         ".venv/bin/python -m build ../mem01",
     ):
         assert required in readme
+    assert "Once published" not in readme
+    assert "not been published" not in readme
 
 
 def test_check_is_secret_safe_and_does_not_run_the_demo(

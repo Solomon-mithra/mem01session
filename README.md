@@ -139,7 +139,7 @@ deleted_count = await session.clear_memory()
 Recalled records expose their full UTC lifecycle time as `stored_at`, allowing
 clients to compare exact ordering rather than date-only labels.
 
-## Deterministic judge demo
+## Deterministic demo
 
 The default demo is key-free and performs no network or database calls. It runs
 a checked-in 40-conversation fixture through 120 actual `Agent` + `Runner`
@@ -206,7 +206,7 @@ installation into a clean environment using only that wheelhouse:
 ```bash
 python -m venv /tmp/mem01session-wheel-smoke
 /tmp/mem01session-wheel-smoke/bin/pip install --no-index \
-  --find-links /tmp/mem01session-wheelhouse mem01session==0.1.2
+  --find-links /tmp/mem01session-wheelhouse mem01session==0.1.3
 /tmp/mem01session-wheel-smoke/bin/python -c \
   "from mem01session import memSession; print(memSession.__name__)"
 /tmp/mem01session-wheel-smoke/bin/mem01session-demo --json
@@ -224,27 +224,24 @@ MEM01SESSION_WHEELHOUSE=/tmp/mem01session-wheelhouse \
   -k clean_preprovisioned_venv -q
 ```
 
-## Scope, provenance, and current status
+## Scope and provenance
 
-The **Pre-existing mem01 engine** supplied belief types, extraction, recall,
-lifecycle operations, and storage foundations before this Build Week effort.
-**Build Week work** added the OpenAI-only embedded runtime builder and pooled
-Postgres ownership in that engine, plus this renamed package, internal
-SQLite composition, per-run hooks, lifecycle hardening, deterministic evidence,
-packaging checks, and documentation.
+The **mem01 engine** (published as `mem01-engine`) supplies belief types,
+extraction, recall, lifecycle operations, and storage. **This package** adds
+the OpenAI Agents SDK Session integration: embedded runtime use, internal
+SQLite composition, per-run recall hooks, lifecycle APIs, deterministic demo
+evidence, and packaging.
 
-Codex assisted with planning, implementation, tests, and review. The human owner
-made the product decisions: the `mem01session`/`memSession` identity,
-SQLite-inside packaging, OpenAI-only scope, `gpt-5.6-sol`, and explicit
-failure behavior.
+Product decisions for this package include the `mem01session` / `memSession`
+identity, SQLite-inside short-term storage, OpenAI-only scope for v0.1,
+`gpt-5.6-sol` defaults, and explicit failure-open vs strict behavior.
 
 Development verification in this workspace uses macOS on Apple Silicon,
 Python 3.14.4, and `openai-agents` 0.18.2. The declared package floor remains
 Python 3.11; no broader platform matrix is claimed here.
 
-Published surfaces: PyPI (`mem01session`, depends on `mem01-engine`) and the
-public GitHub repository. A hosted multi-user demo and submission video remain
-separate delivery items when provided.
+Install from PyPI (`pip install mem01session`) or browse the public GitHub
+repository.
 
 ## Development gates
 

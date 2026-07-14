@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the packaged Mem01Session Build Week demo."""
+"""Run the packaged Mem01Session deterministic demo."""
 
 from mem01session.demo import main
 

@@ -22,4 +22,4 @@ __all__ = [
     "close_shared_runtimes",
     "estimate_prompt_context",
 ]
-__version__ = "0.1.2"
+__version__ = "0.1.3"

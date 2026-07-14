@@ -50,7 +50,7 @@ ARTIFACT_PATH = Path(__file__).parents[2] / "artifacts" / "prepared-input-scalin
 
 @dataclass(frozen=True, slots=True)
 class DemoConversation:
-    """One immutable input from the checked-in Build Week scenario."""
+    """One immutable input from the checked-in demo scenario."""
 
     conversation: int
     user_input: str
@@ -577,7 +577,7 @@ async def _async_main(arguments: argparse.Namespace) -> int:
     if arguments.json:
         print(json.dumps(report, indent=2, ensure_ascii=False))
     else:
-        print("Mem01Session deterministic Build Week evidence")
+        print("Mem01Session deterministic prepared-input evidence")
         print(f"SDK runs: {report['sdk_runs']}; fixture: 40 conversations")
         for record in report["measurements"]:
             print(
