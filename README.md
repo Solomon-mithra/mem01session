@@ -224,6 +224,64 @@ MEM01SESSION_WHEELHOUSE=/tmp/mem01session-wheelhouse \
   -k clean_preprovisioned_venv -q
 ```
 
+## OpenAI Build Week collaboration and provenance
+
+### Codex collaboration
+
+Codex was the primary implementation collaborator for the Build Week extension.
+It helped inspect the current Agents SDK Session protocol and persistence path,
+implement the embedded runtime and per-run recall hooks, build the package and
+demo harness, write and run tests, diagnose integration failures, verify clean
+wheel installation, and keep the technical documentation aligned with observed
+behavior.
+
+Codex accelerated the implementation and verification workflow; it did not
+choose the product direction independently. The architecture, supported scope,
+evidence standard, and trade-offs below were human decisions.
+
+### GPT-5.6 usage
+
+The opt-in live path uses `gpt-5.6-sol` for the demonstrated OpenAI Agent answer
+and as the configured extraction model used by the embedded mem01 runtime.
+Mem01Session supplies bounded, query-relevant active beliefs to the answering
+run through the Agents SDK model-input filter. After an eligible user/assistant
+turn, the embedded runtime uses the configured model path to extract lifecycle
+updates for durable storage.
+
+The key-free deterministic demo uses local fakes and makes no OpenAI or database
+calls. It validates Session preparation, isolation, lifecycle state, provenance,
+and recall budgets without treating generated wording as a deterministic test.
+The explicit `--live` mode records GPT-5.6 answers as observations.
+
+### Human decisions
+
+The human-authored product decisions were to:
+
+- compose the SDK's tested `SQLiteSession` rather than reimplement short-term
+  conversation storage;
+- keep raw current-conversation history separate from user-scoped durable
+  beliefs;
+- inject recalled memory through `call_model_input_filter` so synthetic memory
+  is not persisted back into SQLite;
+- make the current user turn authoritative, then active recalled beliefs, then
+  older user claims in the current transcript;
+- bound long-term recall, preserve provenance and superseded history, and expose
+  explicit transcript-versus-memory deletion scopes; and
+- demonstrate inspectable state instead of scripting a stock model failure.
+
+### Prior work and Build Week work
+
+The belief model, lifecycle operations, extraction and recall pipelines,
+Postgres/pgvector storage, earlier benchmark results, and the original mem01
+repository belong to the pre-existing open-source mem01 engine.
+
+During the OpenAI Build Week Submission Period, the new work created the
+`mem01session` developer product: its OpenAI Agents SDK Session integration,
+embedded in-process runtime, internal persistent SQLite default, per-run query
+capture and bounded recall hooks, GPT-5.6 configuration, lifecycle-management
+surface, deterministic comparison and artifacts, clean package installation,
+standalone interactive demo, testing experience, and project presentation.
+
 ## Scope and provenance
 
 The **mem01 engine** (published as `mem01-engine`) supplies belief types,

@@ -181,6 +181,22 @@ def test_readme_documents_install_demo_and_scope() -> None:
     assert "not been published" not in readme
 
 
+def test_readme_documents_build_week_collaboration_and_provenance() -> None:
+    readme = (Path(__file__).parents[1] / "README.md").read_text()
+
+    for required in (
+        "## OpenAI Build Week collaboration and provenance",
+        "### Codex collaboration",
+        "### GPT-5.6 usage",
+        "### Human decisions",
+        "### Prior work and Build Week work",
+        "pre-existing open-source mem01 engine",
+        "During the OpenAI Build Week Submission Period",
+        "deterministic demo uses local fakes",
+    ):
+        assert required in readme
+
+
 def test_check_is_secret_safe_and_does_not_run_the_demo(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
