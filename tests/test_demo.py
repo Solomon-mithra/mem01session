@@ -156,14 +156,12 @@ def test_example_is_a_thin_cli_over_the_packaged_demo() -> None:
     assert len(source.splitlines()) <= 12
 
 
-def test_readme_documents_install_demo_and_scope() -> None:
+def test_readme_documents_install_and_scope() -> None:
     readme = (Path(__file__).parents[1] / "README.md").read_text()
 
     for required in (
         "pip install mem01session",
         "mem01-engine",
-        "python examples/build_week_demo.py --json",
-        "python examples/build_week_demo.py --write-artifact",
         "SQLiteSession",
         "gpt-5.6-sol",
         "session.run_config()",
@@ -172,9 +170,6 @@ def test_readme_documents_install_demo_and_scope() -> None:
         "mem01 engine",
         "This package",
         "Python 3.14.4",
-        "--no-index",
-        "--find-links",
-        ".venv/bin/python -m build ../mem01",
     ):
         assert required in readme
     assert "Once published" not in readme
@@ -192,9 +187,14 @@ def test_readme_documents_build_week_collaboration_and_provenance() -> None:
         "### Prior work and Build Week work",
         "pre-existing open-source mem01 engine",
         "During the OpenAI Build Week Submission Period",
-        "deterministic demo uses local fakes",
     ):
         assert required in readme
+
+    for removed_section in (
+        "## Deterministic demo",
+        "## Build and offline wheel smoke",
+    ):
+        assert removed_section not in readme
 
 
 def test_check_is_secret_safe_and_does_not_run_the_demo(

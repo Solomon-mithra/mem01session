@@ -139,91 +139,6 @@ deleted_count = await session.clear_memory()
 Recalled records expose their full UTC lifecycle time as `stored_at`, allowing
 clients to compare exact ordering rather than date-only labels.
 
-## Deterministic demo
-
-The default demo is key-free and performs no network or database calls. It runs
-a checked-in 40-conversation fixture through 120 actual `Agent` + `Runner`
-preparation calls: a fresh stock Session per conversation, one reused stock
-Session, and fresh `memSession` IDs sharing one user. Local fake model/runtime
-objects make preparation reproducible; their answer text is an observation,
-never a pass/fail guarantee.
-
-```bash
-python examples/build_week_demo.py
-python examples/build_week_demo.py --json
-python examples/build_week_demo.py --write-artifact
-```
-
-`--write-artifact` regenerates
-`artifacts/prepared-input-scaling.json` exactly from the fixture. At conversations
-1/10/40, the generated prepared-item counts are:
-
-| Strategy | 1 | 10 | 40 |
-| --- | ---: | ---: | ---: |
-| Fresh stock | 1 | 1 | 1 |
-| Reused stock | 1 | 19 | 79 |
-| memSession | 2 | 2 | 2 |
-
-The artifact labels its measurement `offline_prepared_model_input`, its estimator
-`utf8_bytes_upper_bound`, and both deterministic local fakes explicitly. The
-numbers are prepared-input measurements, not provider usage or billed-token
-claims. The complete memory system item remains within the configured 800-byte
-upper-bound budget.
-
-`--check` first uses the engine's normal `.env` discovery (`mem01/.env`, the
-workspace `.env`, then the current directory) without overriding existing
-process variables. It validates the two required live settings without
-initializing clients or making Runner/model calls. The deterministic default
-does not load `.env` at all.
-
-`--live` is the only mode that may use OpenAI and Postgres. Each invocation uses
-a unique user scope and four fresh conversation IDs, then runs the NYC/$2,400
-turn, the move to SF, the location/rent question, and the unsupported sister-name
-question through `gpt-5.6-sol`. Its secret-safe JSON labels outputs as model
-observations and includes the observed belief lifecycle; neither answer wording
-nor lifecycle shape is treated as a deterministic guarantee.
-
-## Build and offline wheel smoke
-
-Build both local projects first:
-
-```bash
-.venv/bin/python -m build ../mem01
-.venv/bin/python -m build
-```
-
-Provision a complete local wheelhouse from a trusted index while connected:
-
-```bash
-mkdir -p /tmp/mem01session-wheelhouse
-.venv/bin/python scripts/prepare_offline_wheelhouse.py \
-  /tmp/mem01session-wheelhouse
-```
-
-Then disconnect from the index and perform a normal dependency-resolving
-installation into a clean environment using only that wheelhouse:
-
-```bash
-python -m venv /tmp/mem01session-wheel-smoke
-/tmp/mem01session-wheel-smoke/bin/pip install --no-index \
-  --find-links /tmp/mem01session-wheelhouse mem01session==0.1.3
-/tmp/mem01session-wheel-smoke/bin/python -c \
-  "from mem01session import memSession; print(memSession.__name__)"
-/tmp/mem01session-wheel-smoke/bin/mem01session-demo --json
-```
-
-This proves both local project wheels and every resolved runtime dependency can
-be installed and imported without access to an index.
-
-The same clean-venv smoke is available as an explicit packaging integration
-test:
-
-```bash
-MEM01SESSION_WHEELHOUSE=/tmp/mem01session-wheelhouse \
-  .venv/bin/pytest tests/test_packaging.py \
-  -k clean_preprovisioned_venv -q
-```
-
 ## OpenAI Build Week collaboration and provenance
 
 ### Codex collaboration
@@ -231,8 +146,8 @@ MEM01SESSION_WHEELHOUSE=/tmp/mem01session-wheelhouse \
 Codex was the primary implementation collaborator for the Build Week extension.
 It helped inspect the current Agents SDK Session protocol and persistence path,
 implement the embedded runtime and per-run recall hooks, build the package and
-demo harness, write and run tests, diagnose integration failures, verify clean
-wheel installation, and keep the technical documentation aligned with observed
+demo harness, write and run tests, diagnose integration failures, verify package
+installation, and keep the technical documentation aligned with observed
 behavior.
 
 Codex accelerated the implementation and verification workflow; it did not
@@ -248,10 +163,7 @@ run through the Agents SDK model-input filter. After an eligible user/assistant
 turn, the embedded runtime uses the configured model path to extract lifecycle
 updates for durable storage.
 
-The key-free deterministic demo uses local fakes and makes no OpenAI or database
-calls. It validates Session preparation, isolation, lifecycle state, provenance,
-and recall budgets without treating generated wording as a deterministic test.
-The explicit `--live` mode records GPT-5.6 answers as observations.
+GPT-5.6 outputs are treated as observed results rather than scripted guarantees.
 
 ### Human decisions
 
@@ -279,16 +191,15 @@ During the OpenAI Build Week Submission Period, the new work created the
 `mem01session` developer product: its OpenAI Agents SDK Session integration,
 embedded in-process runtime, internal persistent SQLite default, per-run query
 capture and bounded recall hooks, GPT-5.6 configuration, lifecycle-management
-surface, deterministic comparison and artifacts, clean package installation,
-standalone interactive demo, testing experience, and project presentation.
+surface, clean package installation, standalone interactive demo, testing
+experience, and project presentation.
 
 ## Scope and provenance
 
 The **mem01 engine** (published as `mem01-engine`) supplies belief types,
 extraction, recall, lifecycle operations, and storage. **This package** adds
 the OpenAI Agents SDK Session integration: embedded runtime use, internal
-SQLite composition, per-run recall hooks, lifecycle APIs, deterministic demo
-evidence, and packaging.
+SQLite composition, per-run recall hooks, lifecycle APIs, and packaging.
 
 Product decisions for this package include the `mem01session` / `memSession`
 identity, SQLite-inside short-term storage, OpenAI-only scope for v0.1,
